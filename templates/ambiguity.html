@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grammar Ambiguity Checker - CFG Visualizer</title>
+    <meta name="description" content="Check if a Context-Free Grammar is ambiguous. Automatically finds ambiguous strings and shows two distinct derivations.">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <button id="theme-toggle-btn" class="btn ghost" style="position: absolute; top: -10px; right: 0; font-size: 1.2rem; padding: 0.4rem 0.6rem; border: none;" title="Toggle Theme">🌙</button>
+            <div class="header-glow"></div>
+            <h1>Grammar Ambiguity Checker</h1>
+            <p class="subtitle">Automatically detects if a CFG is ambiguous and demonstrates with two distinct derivations</p>
+            <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                <a href="/" class="btn ghost" style="text-decoration: none;">&larr; Back to Visualizer</a>
+                <a href="/tutorial" class="btn ghost" style="text-decoration: none;">Crash Course / Tutorial</a>
+            </div>
+        </header>
+
+        <!-- Input Section -->
+        <section class="input-section card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="margin-bottom: 0;">Grammar Input</h2>
+                <select id="ambig-examples" style="padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-family: var(--sans); outline: none; cursor: pointer;">
+                    <option value="" disabled selected>Load an Example...</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="ambig-grammar">Grammar Rules</label>
+                <textarea id="ambig-grammar" rows="5" spellcheck="false" placeholder="e.g. E &rarr; E + E | E * E | id">E &rarr; E + E | E * E | id</textarea>
+            </div>
+
+            <div class="symbol-buttons">
+                <span class="symbol-label">Insert:</span>
+                <button class="sym-btn" data-symbol="→" title="Arrow">→</button>
+                <button class="sym-btn" data-symbol="|" title="Pipe">|</button>
+                <button class="sym-btn" data-symbol="ε" title="Epsilon">ε</button>
+            </div>
+
+            <div class="action-buttons">
+                <button id="check-btn" class="btn primary">Check Ambiguity</button>
+                <button id="ambig-reset-btn" class="btn ghost">Clear</button>
+            </div>
+
+            <div id="ambig-error" class="error-msg hidden"></div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="ambig-results" class="output-section hidden">
+            <div id="ambig-banner" class="card" style="text-align: center;">
+                <div id="ambig-banner-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;"></div>
+                <h2 id="ambig-banner-title" style="margin-bottom: 0.5rem;"></h2>
+                <p id="ambig-banner-sub" style="color: var(--text-muted); font-size: 0.9rem;"></p>
+                <div id="ambig-string-box" class="hidden" style="margin-top: 1rem;">
+                    <span class="symbol-label">Ambiguous String:</span>
+                    <div id="ambig-string" class="ambig-string-display"></div>
+                </div>
+            </div>
+
+            <!-- Animation controls -->
+            <div id="ambig-anim-controls" class="hidden" style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.25rem;">
+                <button id="ambig-replay-btn" class="btn accent">Replay Animation</button>
+                <span class="symbol-label">Speed:</span>
+                <input type="range" id="ambig-speed" min="200" max="2000" step="100" value="700" style="flex: 0 1 160px;">
+                <span id="ambig-speed-val" class="symbol-label" style="min-width: 3rem;">700ms</span>
+            </div>
+
+            <!-- Derivation comparison -->
+            <div id="ambig-derivations" class="hidden">
+                <!-- Diverge legend -->
+                <div class="diverge-legend">
+                    <span class="legend-item"><span class="legend-swatch" style="background: var(--accent);"></span> Same derivation</span>
+                    <span class="legend-item"><span class="legend-swatch" style="background: var(--diverge);"></span> Derivations diverge</span>
+                    <span class="legend-item"><span class="legend-swatch legend-nt"></span> Non-terminal</span>
+                    <span class="legend-item"><span class="legend-swatch legend-terminal"></span> Terminal</span>
+                </div>
+                <div class="ambiguity-derivations-grid">
+                    <div class="card">
+                        <h3 style="color: var(--accent);">Derivation 1 (LMD)</h3>
+                        <div id="ambig-deriv1" class="steps-container"></div>
+                    </div>
+                    <div class="card">
+                        <h3 style="color: var(--accent);">Derivation 2 (LMD)</h3>
+                        <div id="ambig-deriv2" class="steps-container"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Overlay for non-ambiguous popup -->
+    <div id="ambig-overlay" class="hidden"></div>
+
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/ambiguity.js"></script>
+</body>
+</html>

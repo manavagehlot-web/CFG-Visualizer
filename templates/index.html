@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFG Derivation & Parse Tree Visualizer</title>
+    <meta name="description" content="Visualize Context-Free Grammar derivations (leftmost & rightmost) and parse trees interactively.">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <button id="theme-toggle-btn" class="btn ghost" style="position: absolute; top: -10px; right: 0; font-size: 1.2rem; padding: 0.4rem 0.6rem; border: none;" title="Toggle Theme">🌙</button>
+            <div class="header-glow"></div>
+            <h1>CFG Derivation & Parse Tree Visualizer</h1>
+            <p class="subtitle">Generate leftmost & rightmost derivations with animated parse trees</p>
+            <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                <a href="/tutorial" class="btn primary" style="text-decoration: none;">Crash Course / Tutorial</a>
+                <a href="/ambiguity" class="btn accent" style="text-decoration: none;">Ambiguity Checker</a>
+            </div>
+        </header>
+
+        <!-- Input Section -->
+        <section class="input-section card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="margin-bottom: 0;">Input</h2>
+                <select id="examples-dropdown" style="padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-family: var(--sans); outline: none; cursor: pointer;">
+                    <option value="" disabled selected>Load an Example...</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="grammar-input">Grammar Rules</label>
+                <textarea id="grammar-input" rows="5" spellcheck="false" placeholder="e.g. S &rarr; A B">S &rarr; A B
+A &rarr; a A | &epsilon;
+B &rarr; b B | b</textarea>
+            </div>
+
+            <div class="input-group">
+                <label for="string-input">Input String (space-separated tokens)</label>
+                <input type="text" id="string-input" value="a a b b" spellcheck="false" placeholder="e.g. a a b b">
+            </div>
+
+            <div class="symbol-buttons">
+                <span class="symbol-label">Insert:</span>
+                <button class="sym-btn" data-symbol="→" title="Arrow">→</button>
+                <button class="sym-btn" data-symbol="|" title="Pipe">|</button>
+                <button class="sym-btn" data-symbol="ε" title="Epsilon">ε</button>
+            </div>
+
+            <div class="action-buttons">
+                <button id="derive-btn" class="btn primary">Derive</button>
+                <button id="animate-btn" class="btn accent" disabled>Start Animation</button>
+                <button id="pause-btn" class="btn ghost" disabled>Pause</button>
+                <button id="reset-btn" class="btn ghost">Clear All</button>
+            </div>
+
+            <div id="anim-settings" class="anim-settings hidden" style="margin-top: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                <span class="symbol-label">Speed:</span>
+                <input type="range" id="speed-slider" min="200" max="2000" step="100" value="600" style="flex: 1; max-width: 200px;">
+                <span id="speed-val" class="symbol-label" style="min-width: 3rem;">600ms</span>
+            </div>
+
+            <div id="error-msg" class="error-msg hidden"></div>
+        </section>
+
+        <!-- Output Section -->
+        <section id="output-section" class="output-section hidden">
+
+            <!-- View Mode Tab Bar -->
+            <div class="view-mode-bar" id="view-mode-bar">
+                <button class="view-mode-btn active" id="view-lmd-btn" data-view="lmd">
+                    <span class="vm-icon">⬅️</span> LMD
+                </button>
+                <button class="view-mode-btn" id="view-rmd-btn" data-view="rmd">
+                    <span class="vm-icon">➡️</span> RMD
+                </button>
+                <button class="view-mode-btn" id="view-tree-btn" data-view="tree">
+                    <span class="vm-icon">🌳</span> Parse Tree
+                </button>
+                <button class="view-mode-btn" id="view-all-btn" data-view="all">
+                    <span class="vm-icon">⊞</span> All
+                </button>
+            </div>
+
+            <!-- Navigation -->
+            <div class="step-nav">
+                <button id="prev-btn" class="btn small" disabled>&larr; Previous</button>
+                <span id="step-counter" class="step-counter">Step 0 / 0</span>
+                <button id="next-btn" class="btn small" disabled>Next &rarr;</button>
+            </div>
+
+            <!-- ── LMD Panel ── -->
+            <div id="panel-lmd" class="view-panel">
+                <div class="derivation-panel card">
+                    <div class="derivation-panel-header">
+                        <h3>Leftmost Derivation (LMD)</h3>
+                        <button class="btn small step-exp-toggle-all" data-target="lmd-steps" title="Toggle all explanations">Expand All</button>
+                    </div>
+                    <!-- Legend -->
+                    <div class="derivation-legend">
+                        <span class="legend-item"><span class="legend-swatch legend-nt"></span> Non-terminal</span>
+                        <span class="legend-item"><span class="legend-swatch legend-terminal"></span> Terminal</span>
+                        <span class="legend-item"><span class="legend-swatch legend-expanding"></span> Next to expand</span>
+                    </div>
+                    <div id="lmd-steps" class="steps-container" data-mode="lmd"></div>
+                    <p id="lmd-none" class="none-msg hidden">No leftmost derivation found.</p>
+                </div>
+            </div>
+
+            <!-- ── RMD Panel ── -->
+            <div id="panel-rmd" class="view-panel hidden">
+                <div class="derivation-panel card">
+                    <div class="derivation-panel-header">
+                        <h3>Rightmost Derivation (RMD)</h3>
+                        <button class="btn small step-exp-toggle-all" data-target="rmd-steps" title="Toggle all explanations">Expand All</button>
+                    </div>
+                    <!-- Legend -->
+                    <div class="derivation-legend">
+                        <span class="legend-item"><span class="legend-swatch legend-nt"></span> Non-terminal</span>
+                        <span class="legend-item"><span class="legend-swatch legend-terminal"></span> Terminal</span>
+                        <span class="legend-item"><span class="legend-swatch legend-expanding"></span> Next to expand</span>
+                    </div>
+                    <div id="rmd-steps" class="steps-container" data-mode="rmd"></div>
+                    <p id="rmd-none" class="none-msg hidden">No rightmost derivation found.</p>
+                </div>
+            </div>
+
+            <!-- ── Parse Tree Panel ── -->
+            <div id="panel-tree" class="view-panel hidden">
+                <div class="tree-section card">
+                    <h3>Parse Tree</h3>
+                    <!-- Legend -->
+                    <div class="derivation-legend">
+                        <span class="legend-item"><span class="legend-swatch legend-tree-nt"></span> Non-terminal node</span>
+                        <span class="legend-item"><span class="legend-swatch legend-tree-terminal"></span> Terminal node</span>
+                        <span class="legend-item"><span class="legend-swatch legend-tree-eps"></span> &epsilon; (empty)</span>
+                    </div>
+                    <div class="tree-toggle">
+                        <button class="btn small tree-tab active" data-tree="lmd">LMD Tree</button>
+                        <button class="btn small tree-tab" data-tree="rmd">RMD Tree</button>
+                    </div>
+                    <div id="tree-container" class="tree-container">
+                        <svg id="tree-svg"></svg>
+                    </div>
+                </div>
+                <!-- Collapsible explanation for focused Tree view -->
+                <div class="explanation-section card" id="inline-tree-exp">
+                    <button class="explanation-toggle" id="inline-tree-toggle" aria-expanded="false">
+                        <span class="explanation-toggle-icon">💡</span>
+                        <span class="explanation-toggle-title">How the Parse Tree was constructed</span>
+                        <span class="explanation-toggle-hint">Click to expand step-by-step breakdown</span>
+                        <span class="explanation-chevron">▼</span>
+                    </button>
+                    <div class="explanation-body exp-collapsed" id="inline-tree-body">
+                        <div class="exp-intro">
+                            A <strong>Parse Tree</strong> is a visual record of every grammar rule applied.
+                            Internal nodes are non-terminals; leaves are terminals or &epsilon;. Reading the leaves
+                            left-to-right reconstructs the derived string.
+                        </div>
+                        <ol id="inline-tree-list" class="exp-steps-list"></ol>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ── ALL Panel ── -->
+            <div id="panel-all" class="view-panel hidden">
+                <div class="derivations-grid">
+                    <!-- LMD -->
+                    <div class="derivation-panel card">
+                        <div class="derivation-panel-header">
+                            <h3>Leftmost Derivation (LMD)</h3>
+                            <button class="btn small step-exp-toggle-all" data-target="lmd-steps-all" title="Toggle all explanations">Expand All</button>
+                        </div>
+                        <div class="derivation-legend">
+                            <span class="legend-item"><span class="legend-swatch legend-nt"></span> NT</span>
+                            <span class="legend-item"><span class="legend-swatch legend-terminal"></span> T</span>
+                            <span class="legend-item"><span class="legend-swatch legend-expanding"></span> Expanding</span>
+                        </div>
+                        <div id="lmd-steps-all" class="steps-container" data-mode="lmd"></div>
+                        <p id="lmd-none-all" class="none-msg hidden">No leftmost derivation found.</p>
+                    </div>
+                    <!-- RMD -->
+                    <div class="derivation-panel card">
+                        <div class="derivation-panel-header">
+                            <h3>Rightmost Derivation (RMD)</h3>
+                            <button class="btn small step-exp-toggle-all" data-target="rmd-steps-all" title="Toggle all explanations">Expand All</button>
+                        </div>
+                        <div class="derivation-legend">
+                            <span class="legend-item"><span class="legend-swatch legend-nt"></span> NT</span>
+                            <span class="legend-item"><span class="legend-swatch legend-terminal"></span> T</span>
+                            <span class="legend-item"><span class="legend-swatch legend-expanding"></span> Expanding</span>
+                        </div>
+                        <div id="rmd-steps-all" class="steps-container" data-mode="rmd"></div>
+                        <p id="rmd-none-all" class="none-msg hidden">No rightmost derivation found.</p>
+                    </div>
+                </div>
+
+                <!-- Parse Tree -->
+                <div class="tree-section card">
+                    <h3>Parse Tree</h3>
+                    <div class="derivation-legend">
+                        <span class="legend-item"><span class="legend-swatch legend-tree-nt"></span> Non-terminal</span>
+                        <span class="legend-item"><span class="legend-swatch legend-tree-terminal"></span> Terminal</span>
+                        <span class="legend-item"><span class="legend-swatch legend-tree-eps"></span> &epsilon;</span>
+                    </div>
+                    <div class="tree-toggle">
+                        <button class="btn small tree-tab-all active" data-tree="lmd">LMD Tree</button>
+                        <button class="btn small tree-tab-all" data-tree="rmd">RMD Tree</button>
+                    </div>
+                    <div class="tree-container">
+                        <svg id="tree-svg-all"></svg>
+                    </div>
+                </div>
+
+                <!-- Parse Tree explanation -->
+                <div id="explanation-section" class="explanation-section card">
+                    <button class="explanation-toggle" id="explanation-toggle-btn" aria-expanded="false">
+                        <span class="explanation-toggle-icon">💡</span>
+                        <span class="explanation-toggle-title">How the Parse Tree was constructed</span>
+                        <span class="explanation-toggle-hint">Understand how the parse tree was built</span>
+                        <span class="explanation-chevron">▼</span>
+                    </button>
+                    <div id="explanation-body" class="explanation-body exp-collapsed">
+                        <div class="exp-intro">
+                            A <strong>Parse Tree</strong> records every grammar rule applied.
+                        </div>
+                        <ol id="exp-tree-list" class="exp-steps-list"></ol>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </div>
+
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

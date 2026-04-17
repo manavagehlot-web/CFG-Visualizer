@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crash Course - CFG Derivation & Parse Tree Visualizer</title>
+    <meta name="description" content="A comprehensive crash course on Formal Grammars, Regular Grammars, Context-Free Grammars (CFG), DFA to RG conversion, and how to use the CFG Visualizer tool.">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* ── Tutorial-specific styles ── */
+        .tutorial-nav {
+            display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;
+            margin: 2rem auto; max-width: 900px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 0.4rem;
+        }
+        .tutorial-nav-btn {
+            flex: 1; min-width: 120px; font-family: var(--sans); font-size: 0.78rem;
+            font-weight: 600; border: none; border-radius: 9px; padding: 0.55rem 0.6rem;
+            cursor: pointer; background: transparent; color: var(--text-muted);
+            transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+            text-align: center; letter-spacing: 0.2px;
+        }
+        .tutorial-nav-btn:hover:not(.active) { background: var(--highlight); color: var(--text); }
+        .tutorial-nav-btn.active { background: var(--accent); color: #fff; box-shadow: 0 3px 12px var(--accent-glow); }
+
+        .tutorial-section { display: none; max-width: 860px; margin: 0 auto 3rem; animation: fadeUp 0.4s ease; }
+        .tutorial-section.active { display: block; }
+
+        .slideshow-container {
+            position: relative; max-width: 800px; margin: 1.5rem auto;
+            border-radius: var(--radius); overflow: hidden;
+            background: var(--bg-card); border: 1px solid var(--border); box-shadow: var(--shadow);
+        }
+        .slide {
+            display: none; padding: 2.5rem; text-align: center; min-height: 260px;
+        }
+        .slide.active {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+        .slide h3 { color: var(--text); font-size: 1.4rem; margin-bottom: 1rem; }
+        .slide p { color: var(--text-muted); font-size: 1rem; max-width: 620px; margin: 0 auto; line-height: 1.75; }
+
+        .controls {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1rem 2rem; background: var(--bg-card-alt); border-top: 1px solid var(--border);
+        }
+
+        .tutorial-content {
+            max-width: 860px; margin: 1.5rem auto; text-align: left;
+            background: var(--bg-card); padding: 2.5rem; border-radius: var(--radius);
+            border: 1px solid var(--border); box-shadow: var(--shadow);
+        }
+        .tutorial-content h2 {
+            margin-bottom: 1.25rem; color: var(--text); font-size: 1.35rem;
+            padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent);
+            display: inline-block;
+        }
+        .tutorial-content h3 { margin: 1.5rem 0 0.75rem; color: var(--accent); font-size: 1.1rem; }
+        .tutorial-content p { margin-bottom: 1rem; color: var(--text-muted); font-size: 0.98rem; line-height: 1.75; }
+        .tutorial-content ul, .tutorial-content ol { padding-left: 22px; color: var(--text-muted); margin-bottom: 1.25rem; font-size: 0.98rem; }
+        .tutorial-content li { margin-bottom: 0.6rem; line-height: 1.65; }
+
+        .formula-box {
+            margin: 1.25rem 0; padding: 1.25rem 1.5rem; background: var(--bg-card-alt);
+            border-left: 4px solid var(--accent); border-radius: 0 10px 10px 0;
+            font-family: var(--mono); font-size: 0.95rem; color: var(--text);
+            line-height: 1.8; overflow-x: auto;
+        }
+        .formula-box .label { color: var(--accent); font-weight: 700; display: block; margin-bottom: 0.3rem; font-family: var(--sans); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .example-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0 1.5rem;
+        }
+        @media (max-width: 650px) { .example-grid { grid-template-columns: 1fr; } }
+        .example-card {
+            padding: 1rem 1.25rem; background: var(--bg-card-alt); border: 1px solid var(--border);
+            border-radius: 10px; transition: border-color 0.2s, transform 0.15s;
+        }
+        .example-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .example-card .ex-title { font-weight: 700; font-size: 0.85rem; color: var(--accent); margin-bottom: 0.4rem; }
+        .example-card .ex-body { font-family: var(--mono); font-size: 0.88rem; color: var(--text); line-height: 1.7; }
+
+        .concept-tag {
+            display: inline-block; padding: 0.15rem 0.55rem; border-radius: 5px;
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 0.4px;
+            text-transform: uppercase; margin-right: 0.3rem;
+        }
+        .tag-rg { background: rgba(46, 204, 113, 0.15); color: #27ae60; border: 1px solid rgba(46, 204, 113, 0.3); }
+        .tag-cfg { background: rgba(52, 152, 219, 0.15); color: #2980b9; border: 1px solid rgba(52, 152, 219, 0.3); }
+        .tag-important { background: rgba(231, 76, 60, 0.12); color: var(--red); border: 1px solid rgba(231, 76, 60, 0.3); }
+        .tag-tool { background: rgba(247, 147, 30, 0.15); color: var(--accent); border: 1px solid rgba(247, 147, 30, 0.3); }
+
+        .compare-table {
+            width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+            font-size: 0.88rem; color: var(--text);
+        }
+        .compare-table th {
+            background: var(--accent); color: #fff; padding: 0.65rem 0.85rem;
+            text-align: left; font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .compare-table td {
+            padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border);
+            background: var(--bg-card-alt);
+        }
+        .compare-table tr:hover td { background: var(--highlight); }
+        .compare-table th:first-child { border-radius: 8px 0 0 0; }
+        .compare-table th:last-child { border-radius: 0 8px 0 0; }
+
+        .alert {
+            padding: 1.1rem 1.25rem; border-radius: 10px; margin: 1.25rem 0; font-size: 0.95rem; line-height: 1.65;
+        }
+        .alert.warning { background: rgba(235, 149, 50, 0.1); color: var(--accent); border: 1px solid rgba(235, 149, 50, 0.4); }
+        .alert.warning b { color: #d35400; }
+        .alert.info { background: rgba(52, 152, 219, 0.1); color: #2980b9; border: 1px solid rgba(52, 152, 219, 0.3); }
+        .alert.info b { color: #1a5276; }
+        html.dark-theme .alert.info { color: #5dade2; }
+        html.dark-theme .alert.info b { color: #85c1e9; }
+        .alert.success { background: rgba(46, 204, 113, 0.1); color: #27ae60; border: 1px solid rgba(46, 204, 113, 0.3); }
+        .alert.success b { color: #1e8449; }
+        html.dark-theme .alert.success { color: #48c9b0; }
+        html.dark-theme .alert.success b { color: #76d7c4; }
+
+        .demo-box {
+            margin-top: 1rem; padding: 1.25rem; background: var(--bg-card-alt);
+            text-align: left; border-radius: 10px; border: 1px solid var(--border);
+            width: 100%; max-width: 500px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .code-hl { color: var(--accent); font-family: var(--mono); font-weight: 600; font-size: 0.92rem; }
+
+        .func-card {
+            margin: 1rem 0; padding: 1.25rem 1.5rem; background: var(--bg-card-alt);
+            border: 1px solid var(--border); border-radius: 10px;
+            border-left: 4px solid var(--green);
+        }
+        .func-card .func-name {
+            font-family: var(--mono); font-weight: 700; font-size: 0.95rem;
+            color: var(--green); margin-bottom: 0.4rem;
+        }
+        .func-card .func-desc { font-size: 0.9rem; color: var(--text-muted); line-height: 1.65; }
+        .func-card .func-desc b { color: var(--text); }
+
+        .dfa-diagram {
+            display: flex; align-items: center; justify-content: center;
+            gap: 0.5rem; margin: 1rem 0; padding: 1.25rem;
+            background: var(--bg-card-alt); border-radius: 10px; border: 1px solid var(--border);
+            font-family: var(--mono); font-size: 0.95rem; flex-wrap: wrap;
+        }
+        .dfa-state {
+            width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; color: var(--text); background: var(--bg-card);
+            position: relative;
+        }
+        .dfa-state.final { box-shadow: 0 0 0 3px var(--bg-card-alt), 0 0 0 5px var(--accent); }
+        .dfa-state.start::before { content: "→"; position: absolute; left: -22px; color: var(--accent); font-size: 1.2rem; }
+        .dfa-arrow { color: var(--accent); font-weight: 600; font-size: 1rem; }
+        .dfa-label { font-size: 0.75rem; color: var(--text-muted); }
+
+        .section-divider {
+            border: 0; border-top: 1px solid var(--border); margin: 2rem 0;
+        }
+
+        .step-number {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%; background: var(--accent);
+            color: #fff; font-weight: 700; font-size: 0.82rem; margin-right: 0.5rem;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" style="max-width: 920px;">
+        <header class="app-header">
+            <button id="theme-toggle-btn" class="btn ghost" style="position: absolute; top: -10px; right: 0; font-size: 1.2rem; padding: 0.4rem 0.6rem; border: none;" title="Toggle Theme">🌙</button>
+            <div class="header-glow"></div>
+            <h1>Crash Course & Theory Guide</h1>
+            <p class="subtitle">From formal grammar foundations to mastering the visualizer</p>
+            <div style="margin-top: 1.25rem; display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                <a href="/" class="btn ghost" style="text-decoration: none;">← Back to Visualizer</a>
+                <a href="/ambiguity" class="btn accent" style="text-decoration: none;">Ambiguity Checker</a>
+            </div>
+        </header>
+
+        <!-- ── Section Navigation Tabs ── -->
+        <nav class="tutorial-nav" id="tutorial-nav">
+            <button class="tutorial-nav-btn active" data-section="quickstart">Quick Start</button>
+            <button class="tutorial-nav-btn" data-section="grammar-theory">Grammar Theory</button>
+            <button class="tutorial-nav-btn" data-section="regular-grammar">Regular Grammar</button>
+            <button class="tutorial-nav-btn" data-section="cfg-theory">CFG In-Depth</button>
+            <button class="tutorial-nav-btn" data-section="how-it-works">How It Works</button>
+            <button class="tutorial-nav-btn" data-section="troubleshooting">Troubleshooting</button>
+        </nav>
+
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 1: QUICK START (Slideshow)                          -->
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <div class="tutorial-section active" id="sec-quickstart">
+
+            <div class="slideshow-container">
+                <div class="slide active" id="slide1">
+                    <h3>1. What exactly is a CFG?</h3>
+                    <p>Think of it as a <b>recipe</b> for writing sentences mathematically. You define big blocks (non-terminals), and those blocks break down into smaller words (terminals) until a full sentence is formed.</p>
+                    <div class="demo-box">
+                        <div class="code-hl">Sentence → Noun Verb<br>Noun → "Cat" | "Dog"<br>Verb → "Runs" | "Sleeps"</div>
+                    </div>
+                </div>
+
+                <div class="slide" id="slide2">
+                    <h3>2. The Grammar Input</h3>
+                    <p>Type your rule recipes in the "Grammar Rules" box! Use the button "→" or type "->" to represent an arrow. The application uses a smart auto-formatter, so every character you type is automatically given perfect spacing.</p>
+                    <div class="demo-box" style="text-align: center;">
+                        <div style="font-family: var(--mono); font-size: 1.1rem; color: var(--text);">S → a S b | <span style="color: var(--orange);">ε</span></div>
+                    </div>
+                </div>
+
+                <div class="slide" id="slide3">
+                    <h3>3. Testing a String</h3>
+                    <p>Once your rules are set, type a sequence into the "Input String" box to see if it's mathematically valid. Don't worry about spaces; the tool perfectly extracts the tokens for you as you type.</p>
+                    <div class="demo-box" style="text-align: center;">
+                        <div class="code-hl" style="font-size: 1.2rem; color: var(--green);">a a b b</div>
+                    </div>
+                </div>
+
+                <div class="slide" id="slide4">
+                    <h3>4. Cinematic Animations</h3>
+                    <p>Click <b>Derive</b>! If your string is valid, you'll see steps to prove it. Click the "Start Animation" button, adjust the Speed Slider, and watch the magical tree grow step-by-step.</p>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn accent" disabled>Start Animation</button>
+                        <button class="btn ghost" disabled>Pause</button>
+                    </div>
+                </div>
+
+                <div class="slide" id="slide5">
+                    <h3>5. Multiple View Modes</h3>
+                    <p>Switch between <b>LMD</b> (Leftmost Derivation), <b>RMD</b> (Rightmost Derivation), <b>Parse Tree</b>, or the <b>All</b> view to see everything side-by-side. Each step includes expandable explanations so you understand every single rule application.</p>
+                    <div class="demo-box" style="text-align: center;">
+                        <div style="display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap;">
+                            <span class="concept-tag tag-tool">LMD</span>
+                            <span class="concept-tag tag-tool">RMD</span>
+                            <span class="concept-tag tag-tool">Parse Tree</span>
+                            <span class="concept-tag tag-tool">All</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="slide" id="slide6">
+                    <h3>6. Ambiguity Checker</h3>
+                    <p>Navigate to the <b>Ambiguity Checker</b> from the header to automatically detect if your grammar is ambiguous. If so, the tool finds a witness string and animates <b>two distinct leftmost derivations</b> side-by-side, highlighting exactly where they diverge.</p>
+                    <div style="margin-top: 1rem;">
+                        <a href="/ambiguity" class="btn accent" style="text-decoration: none;">Try Ambiguity Checker →</a>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn ghost" id="prevSlide">← Prev</button>
+                    <span id="slideCounter" style="color: var(--text-muted); font-weight: 600;">1 / 6</span>
+                    <button class="btn accent" id="nextSlide">Next →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 2: GRAMMAR THEORY                                   -->
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <div class="tutorial-section" id="sec-grammar-theory">
+
+            <section class="tutorial-content">
+                <h2>What is a Formal Grammar?</h2>
+                <p>In the Theory of Automata and Formal Languages (TAFL), a <b>grammar</b> is a mathematical system that defines a set of strings (a <b>language</b>). It provides a precise mechanism for generating every valid string in the language, and rejecting everything else.</p>
+
+                <h3>Formal Definition</h3>
+                <p>A grammar is defined as a 4-tuple:</p>
+                <div class="formula-box">
+                    <span class="label">Grammar</span>
+                    G = (V, T, P, S)
+                </div>
+                <ul>
+                    <li><b>V</b> = Set of <b>variables</b> (non-terminals). These are placeholders like A, B, C, S that represent abstract categories. They act as intermediate "building blocks" that get replaced during derivation.</li>
+                    <li><b>T</b> = Set of <b>terminals</b>. These are the actual symbols that appear in the final output string: a, b, c, 0, 1, +, *, (, ), etc. They cannot be broken down further.</li>
+                    <li><b>P</b> = Set of <b>production rules</b> of the form <code>α ⇒ β</code>, where α contains at least one variable, and β is any combination of variables and terminals. These are the "recipes" that tell you how to rewrite symbols.</li>
+                    <li><b>S</b> = The <b>start symbol</b> (S ∈ V). Every derivation must begin from this special non-terminal.</li>
+                </ul>
+
+                <div class="alert info">
+                    <b>Key Insight:</b> The constraints placed on the production rules determine the <b>type</b> of grammar. Weaker constraints allow more expressive languages but require more powerful machines to recognize them. This is the foundation of the <b>Chomsky Hierarchy</b>.
+                </div>
+
+                <h3>The Chomsky Hierarchy</h3>
+                <p>Noam Chomsky classified grammars into four types based on the form of their production rules:</p>
+                <table class="compare-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Production Rule Form</th>
+                            <th>Recognizer</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><b>Type 3</b></td>
+                            <td>Regular Grammar</td>
+                            <td>A → wB or A → w</td>
+                            <td>Finite Automaton (DFA/NFA)</td>
+                        </tr>
+                        <tr>
+                            <td><b>Type 2</b></td>
+                            <td>Context-Free Grammar</td>
+                            <td>A → α, |A| = 1</td>
+                            <td>Pushdown Automaton (PDA)</td>
+                        </tr>
+                        <tr>
+                            <td><b>Type 1</b></td>
+                            <td>Context-Sensitive Grammar</td>
+                            <td>αAβ → αγβ, |γ| ≥ 1</td>
+                            <td>Linear Bounded Automaton</td>
+                        </tr>
+                        <tr>
+                            <td><b>Type 0</b></td>
+                            <td>Unrestricted Grammar</td>
+                            <td>α → β (no restrictions)</td>
+                            <td>Turing Machine</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert success">
+                    <b>This tool focuses on Type 2: Context-Free Grammars (CFGs)</b>, which are powerful enough to describe programming language syntax, mathematical expressions, and nested structures, while remaining efficiently parsable.
+                </div>
+
+                <h3>Why Do We Need Grammars?</h3>
+                <p>The motivation behind formal grammars is deeply practical:</p>
+                <ul>
+                    <li><b>Compiler Design:</b> Every programming language (Python, C++, Java) has its syntax defined by a CFG. When you write code and the compiler tells you "syntax error", it's because your code failed to derive from the language's grammar.</li>
+                    <li><b>Natural Language Processing:</b> Understanding sentence structures in English, Hindi, or any natural language relies on grammar parsing.</li>
+                    <li><b>Data Validation:</b> XML, JSON, HTML, all structured data formats are formally defined by grammars.</li>
+                    <li><b>Pattern Matching:</b> Regular expressions are a direct application of Regular Grammars (Type 3).</li>
+                </ul>
+            </section>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 3: REGULAR GRAMMAR                                  -->
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <div class="tutorial-section" id="sec-regular-grammar">
+
+            <section class="tutorial-content">
+                <h2><span class="concept-tag tag-rg">Type 3</span> Regular Grammar (RG)</h2>
+                <p>A <b>Regular Grammar</b> is the simplest type in the Chomsky hierarchy. It generates exactly the set of <b>regular languages</b>, the same languages recognized by Finite Automata (DFA/NFA) and described by Regular Expressions.</p>
+
+                <h3>Two Forms of Regular Grammar</h3>
+                <p>Regular grammars come in two flavors, and a grammar must be <b>purely one or the other</b> (never mixed) to qualify as regular:</p>
+
+                <div class="example-grid">
+                    <div class="example-card">
+                        <div class="ex-title">Right Linear Grammar</div>
+                        <div class="ex-body">
+                            A → wB<br>A → w<br><br>
+                            <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--sans);">
+                                The non-terminal appears on the <b>right</b> end.<br>
+                                w ∈ T* (string of terminals)
+                            </span>
+                        </div>
+                    </div>
+                    <div class="example-card">
+                        <div class="ex-title">Left Linear Grammar</div>
+                        <div class="ex-body">
+                            A → Bw<br>A → w<br><br>
+                            <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--sans);">
+                                The non-terminal appears on the <b>left</b> end.<br>
+                                w ∈ T* (string of terminals)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>What Makes a Grammar NOT Regular?</h3>
+                <p>A production like <code>A → aAB</code> or <code>A → AB</code> is <b>not regular</b> because it has non-terminals on <b>both sides</b> of the replacement, or multiple non-terminals appearing together. This violates the strict linear constraint.</p>
+
+                <div class="formula-box">
+                    <span class="label">Examples</span>
+                    A → ab A &nbsp;&nbsp;&nbsp; ✅ Right Linear Regular Grammar<br>
+                    A → A ab &nbsp;&nbsp;&nbsp; ✅ Left Linear Regular Grammar<br>
+                    A → a B a &nbsp;&nbsp; ❌ NOT Regular (non-terminal in the middle)<br>
+                    A → AB &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ❌ NOT Regular (two non-terminals on RHS)
+                </div>
+
+                <hr class="section-divider">
+
+                <h3>Writing Grammars for Regular Languages</h3>
+                <p>Given a regular expression, we can systematically write a right-linear grammar:</p>
+
+                <div class="example-grid">
+                    <div class="example-card">
+                        <div class="ex-title">Language: (a+b)*(aa+bb)</div>
+                        <div class="ex-body">S → aS | bS | aa | bb</div>
+                    </div>
+                    <div class="example-card">
+                        <div class="ex-title">Language: (a+b)*(ab+ba)</div>
+                        <div class="ex-body">S → aS | bS | ab | ba</div>
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+
+                <h3>Conversion: DFA to Regular Grammar (RG)</h3>
+                <p>Every DFA can be systematically converted into a right-linear regular grammar. The process maps states to non-terminals and transitions to production rules:</p>
+
+                <div class="alert info">
+                    <b>Conversion Rules:</b><br>
+                    Given a DFA with transition function δ(A, a) = B:<br><br>
+                    <span class="step-number">1</span> If B is <b>not a final state</b>: write <b>A → aB</b><br><br>
+                    <span class="step-number">2</span> If B <b>is a final state</b>: write <b>A → aB | a</b> (add both the recursive and terminating form)
+                </div>
+
+                <h3>Worked Example: DFA to RG</h3>
+                <p>Consider a DFA for the language <b>(a+b)*ab*</b>:</p>
+
+                <div class="dfa-diagram">
+                    <div class="dfa-state start">S</div>
+                    <span class="dfa-arrow">—a,b→</span>
+                    <div class="dfa-state">S</div>
+                    <span style="color: var(--text-muted); margin: 0 0.5rem;">|</span>
+                    <div class="dfa-state start">S</div>
+                    <span class="dfa-arrow">—a→</span>
+                    <div class="dfa-state final">A</div>
+                    <span class="dfa-arrow">—b→</span>
+                    <div class="dfa-state final">A</div>
+                </div>
+
+                <p>The transition table and resulting grammar:</p>
+                <table class="compare-table">
+                    <thead><tr><th>State</th><th>On 'a'</th><th>On 'b'</th></tr></thead>
+                    <tbody>
+                        <tr><td>S</td><td>A</td><td>S</td></tr>
+                        <tr><td>A (final)</td><td>S</td><td>A</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="formula-box">
+                    <span class="label">Resulting Right-Linear Grammar</span>
+                    S → aA | bS &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: var(--text-muted); font-family: var(--sans); font-size: 0.82rem;">(A is final, so also: S → a)</span><br>
+                    A → aA | bB | b &nbsp;<span style="color: var(--text-muted); font-family: var(--sans); font-size: 0.82rem;">(A is final, self-loop needs terminal option)</span><br>
+                    B → bB | b
+                </div>
+
+                <p>Since A is a final state, whenever we transition <b>into</b> A we must add a terminating production (without the trailing non-terminal) so the grammar can "stop" and accept.</p>
+
+                <div class="alert warning">
+                    <b>Regular Grammars are a strict subset of CFGs.</b> Every regular grammar is also context-free, but not every CFG is regular. Regular grammars cannot handle nested/recursive structures like balanced parentheses or a<sup>n</sup>b<sup>n</sup>.
+                </div>
+            </section>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 4: CFG IN-DEPTH                                     -->
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <div class="tutorial-section" id="sec-cfg-theory">
+
+            <section class="tutorial-content">
+                <h2><span class="concept-tag tag-cfg">Type 2</span> Context-Free Grammar (CFG)</h2>
+                <p>A <b>Context-Free Grammar</b> is more powerful than a regular grammar. The key difference: in a CFG, the left-hand side of every production rule is a <b>single non-terminal</b>, and the right-hand side can be <b>any combination</b> of terminals and non-terminals.</p>
+
+                <div class="formula-box">
+                    <span class="label">CFG Production Rule Form</span>
+                    A → α &nbsp;&nbsp;&nbsp; where |A| = 1, A ∈ V, and α ∈ (V ∪ T)*
+                </div>
+
+                <p>The constraint is minimal: the left-hand side <b>must be exactly one non-terminal</b> (hence "context-free", since the replacement happens regardless of surrounding context). The right side α can be any string of terminals and/or non-terminals, including ε.</p>
+
+                <h3>Why CFGs? The Motivation</h3>
+                <p>Regular grammars (and finite automata) have a fundamental limitation: <b>they have no memory</b>. They can't count or match patterns. Context-Free Languages overcome this because:</p>
+
+                <div class="alert info">
+                    <b>Behind the scenes, CFLs use a stack (memory).</b> A Pushdown Automaton (PDA) recognizes CFLs by pushing and popping symbols on a stack. If a language can be recognized using a stack, it is context-free.
+                </div>
+
+                <h3>Classic CFG Examples</h3>
+
+                <div class="example-grid">
+                    <div class="example-card">
+                        <div class="ex-title">L₁ = {a<sup>i</sup>b<sup>j</sup>c<sup>k</sup> | i, j ≥ 1}</div>
+                        <div class="ex-body">
+                            ✅ Context-Free<br><br>
+                            S → AB<br>A → aA | a<br>B → bB | b
+                            <br><br>
+                            <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--sans);">
+                                No relationship between counts of a, b, c needed. Each group is generated independently.
+                            </span>
+                        </div>
+                    </div>
+                    <div class="example-card">
+                        <div class="ex-title">L = {aa⁺b⁺} (one or more a's, then b's)</div>
+                        <div class="ex-body">
+                            ✅ Context-Free<br><br>
+                            S → AB<br>A → aA | a<br>B → bB | b
+                            <br><br>
+                            <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--sans);">
+                                The counts of a's and b's are independent, both just need ≥ 1.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Languages at the Boundary</h3>
+
+                <div class="example-grid">
+                    <div class="example-card">
+                        <div class="ex-title">L₁ = {a<sup>i</sup>b<sup>j</sup>c<sup>k</sup> | i, j ≥ 1}</div>
+                        <div class="ex-body">
+                            ✅ Context-Free<br><br>
+                            S → AB<br>A → aA | a<br>B → bBc | bc
+                            <br><br>
+                            <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--sans);">
+                                The stack can match b's with c's (push b, pop on c). a's are independent.
+                            </span>
+                        </div>
+                    </div>
+                    <div class="example-card">
+                        <div class="ex-title">L₂ = {a<sup>i</sup>b<sup>i</sup>c<sup>j</sup> | i, j ≥ 1}</div>
+                        <div class="ex-body">
+                            ✅ Context-Free<br><br>
+                            S → AB<br>A → aAb | ab<br>B → cB | c
+                            <br><br>
+                            <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--sans);">
+                                The stack matches a's with b's. c's are generated independently.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert warning">
+                    <b>L₃ = {a<sup>i</sup>b<sup>i</sup>c<sup>i</sup> | i ≥ 1} is NOT Context-Free!</b><br>
+                    This requires matching <b>three</b> counts simultaneously. A stack can push a's and pop on b's, but then it can't also ensure equal c's. You need a Turing machine (or at minimum a Context-Sensitive Grammar) for this.
+                </div>
+
+                <h3>CFG for Palindromes</h3>
+                <p>One of the most elegant CFG applications is generating palindromes over {a, b}:</p>
+
+                <div class="formula-box">
+                    <span class="label">Odd-Length Palindromes: L = {w | w is an odd-length palindrome}</span>
+                    S → aSa | bSb | a | b
+                </div>
+
+                <p>The grammar wraps matching symbols on both sides (using the stack to "remember" the first half), then places a single character in the center to ensure odd length.</p>
+
+                <hr class="section-divider">
+
+                <h3>Derivations: How Strings Are Generated</h3>
+                <p>A <b>derivation</b> is a sequence of rule applications that transforms the start symbol into a string of terminals. There are two canonical orders:</p>
+
+                <div class="example-grid">
+                    <div class="example-card">
+                        <div class="ex-title">Leftmost Derivation (LMD)</div>
+                        <div class="ex-body" style="font-family: var(--sans);">
+                            At each step, always expand the <b>leftmost</b> non-terminal first. This is deterministic: given a parse tree, there is exactly one LMD.
+                        </div>
+                    </div>
+                    <div class="example-card">
+                        <div class="ex-title">Rightmost Derivation (RMD)</div>
+                        <div class="ex-body" style="font-family: var(--sans);">
+                            At each step, always expand the <b>rightmost</b> non-terminal first. This is the order used by bottom-up parsers like LR parsers (in reverse).
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Ambiguity</h3>
+                <p>A grammar is <b>ambiguous</b> if there exists any string that has <b>two or more distinct leftmost derivations</b> (equivalently, two or more distinct parse trees). The classic example:</p>
+
+                <div class="formula-box">
+                    <span class="label">Ambiguous Grammar</span>
+                    E → E + E | E * E | id
+                </div>
+
+                <p>For the string <code>id + id * id</code>, this grammar produces two different parse trees: one that evaluates <code>+</code> first, and another that evaluates <code>*</code> first. This ambiguity is a real problem in compilers because it leads to different computation results.</p>
+
+                <div class="alert success">
+                    <b>This tool detects ambiguity automatically!</b> The Ambiguity Checker generates strings from the grammar and tests each for multiple parse trees, providing a visual proof if ambiguity is found.
+                </div>
+            </section>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 5: HOW IT WORKS (Functions)                         -->
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <div class="tutorial-section" id="sec-how-it-works">
+
+            <section class="tutorial-content">
+                <h2>Under the Hood: How Every Function Works</h2>
+                <p>This section explains the architectural components of the visualizer. The backend is written in Python (Flask), and the frontend uses vanilla JavaScript with SVG rendering for parse trees.</p>
+
+                <h3>Backend: Parsing Pipeline</h3>
+                <p>When you click <b>Derive</b>, the following pipeline executes:</p>
+
+                <div class="func-card">
+                    <div class="func-name">parse_grammar(raw_text)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> Converts raw text from the grammar input box into a structured dictionary.<br>
+                        <b>How:</b> Splits input by lines, replaces <code>-></code> and <code>::=</code> with <code>→</code>, separates alternatives by <code>|</code>, and normalizes epsilon variants (<code>ε</code>, <code>epsilon</code>, <code>eps</code>) into a canonical form. Returns the grammar dictionary, start symbol, set of non-terminals, and any error message.<br>
+                        <b>Motivation:</b> Users type grammars in many notations. This function provides a robust, forgiving parser that accepts any common format.
+                    </div>
+                </div>
+
+                <div class="func-card">
+                    <div class="func-name">earley_parse(grammar, start, tokens, non_terminals)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> The core recognition engine. Determines whether the input string can be derived from the grammar, and if so, extracts a complete parse tree.<br>
+                        <b>How:</b> Implements the <b>Earley Parsing Algorithm</b>, which operates in O(n³) time for general CFGs. It maintains a "chart" of Earley items (partially completed rules), advancing through three operations: <b>Prediction</b> (introduce new rules for non-terminals), <b>Scanning</b> (match a terminal from input), and <b>Completion</b> (propagate completed rules back).<br>
+                        <b>Motivation:</b> Unlike naive BFS derivation which can loop infinitely on recursive grammars like <code>S → S S</code>, the Earley algorithm <b>always terminates</b> and handles any CFG, including ambiguous, left-recursive, and right-recursive grammars.
+                    </div>
+                </div>
+
+                <div class="func-card">
+                    <div class="func-name">earley_parse_multi(grammar, start, tokens, non_terminals, max_trees)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> A modified version of the Earley parser that finds <b>multiple distinct parse trees</b> for the same input string.<br>
+                        <b>How:</b> Instead of storing one item per chart key, it stores up to <code>max_trees</code> items with structurally different trees. Uses <code>_trees_structurally_equal()</code> to detect duplicates.<br>
+                        <b>Motivation:</b> Ambiguity detection requires proving that two different parse trees exist for the same string. This function is the engine behind the Ambiguity Checker.
+                    </div>
+                </div>
+
+                <div class="func-card">
+                    <div class="func-name">extract_derivation(tree, non_terminals, leftmost=True)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> Given a parse tree, produces the step-by-step derivation sequence (either leftmost or rightmost).<br>
+                        <b>How:</b> Walks through the tree, maintaining a "sentential form" (mixed sequence of terminals and non-terminal subtrees). At each step, it locates the leftmost (or rightmost) non-terminal subtree, replaces it with its children, and records the new form with highlight information.<br>
+                        <b>Motivation:</b> The derivation steps are the core educational output. They show students exactly how each rule is applied to transform the start symbol into the final string.
+                    </div>
+                </div>
+
+                <div class="func-card">
+                    <div class="func-name">build_tree_snapshots(tree, non_terminals, leftmost=True)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> Creates incremental snapshots of the parse tree growing step-by-step.<br>
+                        <b>How:</b> Collects the expansion order of non-terminal nodes (leftmost-first or rightmost-first), then for each step, builds a partial tree showing only the nodes expanded so far.<br>
+                        <b>Motivation:</b> Powers the animated parse tree visualization. Each snapshot corresponds to a derivation step, so the tree grows in sync with the step-by-step derivation.
+                    </div>
+                </div>
+
+                <div class="func-card">
+                    <div class="func-name">generate_derivation_explanation(steps_raw, grammar, non_terminals, leftmost)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> Generates rich, human-readable explanations for each derivation step.<br>
+                        <b>How:</b> Analyzes the transition between consecutive steps: identifies which non-terminal was expanded, which production rule was used, what new terminals and non-terminals appeared, and constructs a natural language explanation.<br>
+                        <b>Motivation:</b> Raw derivation steps can be cryptic for beginners. These explanations turn each step into a teaching moment, explaining <i>why</i> a particular non-terminal was chosen and <i>what</i> effect the rule application has.
+                    </div>
+                </div>
+
+                <div class="func-card">
+                    <div class="func-name">generate_strings(grammar, start, non_terminals, ...)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> Generates all terminal strings derivable from the grammar up to a given length, using BFS over leftmost derivation.<br>
+                        <b>How:</b> Starting from the start symbol, it iteratively applies all possible productions to the leftmost non-terminal, collecting complete strings (those with no remaining non-terminals) and pruning forms that exceed the length limit.<br>
+                        <b>Motivation:</b> The Ambiguity Checker needs test strings to check. This function systematically enumerates the language of the grammar, providing candidates for ambiguity testing.
+                    </div>
+                </div>
+
+                <div class="func-card">
+                    <div class="func-name">check_grammar_ambiguity(grammar, start, non_terminals, max_length)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> The top-level ambiguity detection function.<br>
+                        <b>How:</b> Generates strings using <code>generate_strings()</code>, then tests each using <code>earley_parse_multi()</code> to find strings with 2+ parse trees. If found, it extracts both derivations and computes the divergence point.<br>
+                        <b>Motivation:</b> Manually checking for ambiguity is tedious and error-prone. This automates the process and provides a visual witness (two distinct derivations) as proof.
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+
+                <h3>Frontend: Rendering Pipeline</h3>
+
+                <div class="func-card" style="border-left-color: var(--accent);">
+                    <div class="func-name" style="color: var(--accent);">buildStepDom(steps, container, noneEl, explanations, mode)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> Renders derivation steps as interactive, color-coded DOM elements.<br>
+                        <b>How:</b> For each step, creates a row with a step number, colored tokens (orange for non-terminals, green for terminals, purple underline for the NT being expanded next), and an expandable explanation panel.<br>
+                        <b>Color coding:</b> <span style="color: #D35400;">Non-terminal</span> | <span style="color: #136F63;">Terminal</span> | <span style="color: #8E44AD; text-decoration: underline;">Next to expand</span>
+                    </div>
+                </div>
+
+                <div class="func-card" style="border-left-color: var(--accent);">
+                    <div class="func-name" style="color: var(--accent);">renderTree(tree, svgEl, markerId)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> Renders a parse tree as an SVG graphic with animated nodes, edges, and arrow markers.<br>
+                        <b>How:</b> Recursively computes node widths and positions using a top-down layout algorithm, then draws circles for nodes and lines for edges. Nodes pop in with a spring animation via CSS transitions.<br>
+                        <b>Node types:</b> Orange border = non-terminal | Green border = terminal | Italic orange = ε (epsilon)
+                    </div>
+                </div>
+
+                <div class="func-card" style="border-left-color: var(--accent);">
+                    <div class="func-name" style="color: var(--accent);">Smart Auto-Formatting (formatGrammarInput / formatStringInput)</div>
+                    <div class="func-desc">
+                        <b>Purpose:</b> Automatically spaces every symbol as you type, converts <code>-></code> to <code>→</code>, and prevents manual spacebar input.<br>
+                        <b>How:</b> Strips all whitespace from the raw input, then re-inserts a single space after every character (preserving newlines). For the string input, it uses greedy longest-match tokenization against the grammar's terminal symbols.<br>
+                        <b>Motivation:</b> Consistent formatting eliminates tokenization errors and makes grammars more readable. The spacebar lock ensures users can't introduce ambiguous spacing.
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 6: TROUBLESHOOTING                                  -->
+        <!-- ════════════════════════════════════════════════════════════ -->
+        <div class="tutorial-section" id="sec-troubleshooting">
+
+            <section class="tutorial-content">
+                <h2>Restrictions, Limits & Troubleshooting</h2>
+
+                <div class="alert warning">
+                    <b>Performance Cap:</b> For optimal performance without freezing your browser, please keep target input strings to a maximum of <b>50 to 70 symbols</b>. The Earley parsing algorithm runs in O(n&sup3;) time, mathematically guaranteeing accuracy, but extreme lengths (100+ tokens) will significantly slow down.
+                </div>
+
+                <h3>System Guarantees</h3>
+                <ul>
+                    <li><b>Infinite Loop Protection:</b> This system uses the <b>Earley Parser</b>. This guarantees the application will <b>never infinitely loop or crash</b>, even if you define infinite recursive loops in your grammar like <code>S → S S</code>. The parsing will always successfully halt and resolve.</li>
+                    <li><b>Mandatory Halting:</b> The system will intentionally halt processes and declare failure strictly when:
+                        <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+                            <li>The typed string uses symbols that don't exist in your grammar vocabulary.</li>
+                            <li>The structural derivation is fundamentally impossible under the defined rules.</li>
+                        </ul>
+                    </li>
+                    <li><b>Auto-Formatting Lock:</b> Manual "Spacebar" input is strictly ignored! Do not fight the formatter. The internal logic handles all token extraction flawlessly.</li>
+                </ul>
+
+                <hr class="section-divider">
+
+                <h3>Decoding Common Errors</h3>
+
+                <div class="func-card" style="border-left-color: var(--red);">
+                    <div class="func-name" style="color: var(--red);">"Input symbol is a non-terminal"</div>
+                    <div class="func-desc">
+                        You entered an incomplete sentence. The string input box represents <b>final output words only</b> (terminals). You cannot test symbols that represent an abstract rule structure. For example, if your grammar has <code>S → AB</code>, you cannot type <code>A</code> or <code>B</code> as input; you must type the final terminal symbols like <code>a b</code>.
+                    </div>
+                </div>
+
+                <div class="func-card" style="border-left-color: var(--red);">
+                    <div class="func-name" style="color: var(--red);">"Derivation not possible"</div>
+                    <div class="func-desc">
+                        Don't panic! It's not a bug. This is the <b>correct mathematical response</b> whenever the specific string you supplied cannot be generated by applying the grammar rules. Double-check:
+                        <ul style="margin-top: 0.5rem;">
+                            <li>Are your grammar rules correct?</li>
+                            <li>Does the string use only symbols defined as terminals in your grammar?</li>
+                            <li>Is the string actually in the language defined by the grammar?</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="func-card" style="border-left-color: var(--red);">
+                    <div class="func-name" style="color: var(--red);">"Invalid rule (missing →)"</div>
+                    <div class="func-desc">
+                        Each line of your grammar must contain an arrow symbol. Use the <code>→</code> button or type <code>-></code> which will be auto-converted. Every rule must be in the form <code>NonTerminal → body</code>.
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+
+                <h3>Tips for Best Results</h3>
+                <ul>
+                    <li><b>Use the Examples Dropdown:</b> Start with preloaded examples to understand the tool before writing custom grammars.</li>
+                    <li><b>Start Simple:</b> Test with short strings first (2-4 tokens) before trying long ones.</li>
+                    <li><b>Expand Explanations:</b> Click on any derivation step to see a detailed explanation of the rule applied.</li>
+                    <li><b>Compare LMD vs RMD:</b> Use the "All" view or switch between tabs to see how different derivation orders produce the same string but follow different paths.</li>
+                    <li><b>Dark Mode:</b> Click the moon/sun icon in the top-right corner to toggle between light and dark themes.</li>
+                </ul>
+            </section>
+        </div>
+
+    </div>
+
+    <script>
+        // ── Section Navigation ──
+        const navBtns = document.querySelectorAll(".tutorial-nav-btn");
+        const sections = document.querySelectorAll(".tutorial-section");
+
+        navBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                const targetId = "sec-" + btn.dataset.section;
+                navBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                sections.forEach(s => {
+                    s.classList.toggle("active", s.id === targetId);
+                });
+            });
+        });
+
+        // ── Slideshow ──
+        const slides = document.querySelectorAll(".slide");
+        const prevBtn = document.getElementById("prevSlide");
+        const nextBtn = document.getElementById("nextSlide");
+        const counter = document.getElementById("slideCounter");
+        let currentIdx = 0;
+
+        function showSlide(idx) {
+            slides.forEach((s, i) => {
+                if (i === idx) { s.classList.add("active"); }
+                else { s.classList.remove("active"); }
+            });
+            counter.textContent = (idx + 1) + " / " + slides.length;
+            prevBtn.disabled = idx === 0;
+            if (idx === slides.length - 1) {
+                nextBtn.textContent = "Go to Visualizer";
+                nextBtn.style.background = "linear-gradient(135deg, #00b894, #00cec9)";
+            } else {
+                nextBtn.textContent = "Next →";
+                nextBtn.style.background = "";
+            }
+        }
+
+        prevBtn.addEventListener("click", () => {
+            if (currentIdx > 0) { currentIdx--; showSlide(currentIdx); }
+        });
+
+        nextBtn.addEventListener("click", () => {
+            if (currentIdx < slides.length - 1) {
+                currentIdx++;
+                showSlide(currentIdx);
+            } else {
+                window.location.href = "/";
+            }
+        });
+
+        showSlide(0);
+    </script>
+    <script src="/static/js/theme.js"></script>
+</body>
+</html>
